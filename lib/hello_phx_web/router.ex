@@ -8,6 +8,7 @@ defmodule HelloPhxWeb.Router do
     plug :put_root_layout, html: {HelloPhxWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug HelloWeb.Plugs.Locale, "en"
   end
 
   pipeline :api do
