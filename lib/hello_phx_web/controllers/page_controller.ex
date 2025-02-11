@@ -1,5 +1,6 @@
 defmodule HelloPhxWeb.PageController do
   use HelloPhxWeb, :controller
+  plug :put_view, html: HelloPhxWeb.PageHTML, json: HelloPhxWeb.PageJSON
 
   def home(conn, _params) do
     # The home page is often custom made,
