@@ -7,6 +7,14 @@ defmodule HelloPhxWeb.HelloHTML do
   use HelloPhxWeb, :html
 
   embed_templates "hello_html/*"
+
+  attr :message, :string, required: true
+
+  def greet(assigns) do
+    ~H"""
+    <h1 class="text-2xl">Hi there: <%= @messenger %></h1>
+    """
+  end
   #
   # def index(assigns) do
   #   ~H"""
