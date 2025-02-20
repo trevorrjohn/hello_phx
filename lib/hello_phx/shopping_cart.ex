@@ -4,9 +4,12 @@ defmodule HelloPhx.ShoppingCart do
   """
 
   import Ecto.Query, warn: false
+
   alias HelloPhx.Repo
 
-  alias HelloPhx.ShoppingCart.Cart
+  alias HelloPhx.Catalog
+
+  alias HelloPhx.ShoppingCart.{CartItem, Cart}
 
   @doc """
   Returns the list of carts.
@@ -37,19 +40,34 @@ defmodule HelloPhx.ShoppingCart do
   """
   def get_cart!(id), do: Repo.get!(Cart, id)
 
-  @doc """
-  Creates a cart by user_uuid
+  defp reload_cart(%Cart{} = cart), do: get_cart_by_user_uuid(cart.user_uuid)
 
-  ## Examples
+  def add_item_to_cart(%Cart{} = cart, product_id) do
+    product = Catalog.get_product!(product_id)
 
-      iex> create_cart("uuid")
-      {:ok, %Cart{}}
-  """
-  def create_cart(user_uuid) when is_binary(user_uuid) do
-    %Cart{}
-    |> Cart.changeset(%{ user_uuid: user_uuid })
-    |> Repo.insert()
+    %CartItem{quantity: 1, price_when_carted: product.price}
+    |> CartItem.changeset(%{})
+    |> Ecto.Changeset.put_assoc(:cart, cart)
+    |> Ecto.Changeset.put_assoc(:product, product)
+    |> Repo.insert(
+      on_conflict: [inc: [quantity: 1]],
+      conflict_target: [:cart_id, :product_id]
+    )
   end
+
+  def remove_item_from_cart(%Cart{} = cart, product_id) do
+    {1, _} =
+      Repo.delete_all(
+        from(i in CartItem,
+          where: i.cart_id == ^cart.id,
+          where: i.product_id == ^product_id
+        )
+      )
+
+    {:ok, reload_cart(cart)}
+  end
+
+  def create_cart(attrs \\ %{})
 
   @doc """
   Creates a cart with attributes map.
@@ -63,11 +81,22 @@ defmodule HelloPhx.ShoppingCart do
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_cart(attrs \\ %{}) do
+  def create_cart(attrs) when is_map(attrs) do
     %Cart{}
     |> Cart.changeset(attrs)
     |> Repo.insert()
   end
+
+  def create_cart(user_uuid) when is_binary(user_uuid) do
+    %Cart{user_uuid: user_uuid}
+    |> Cart.changeset(%{})
+    |> Repo.insert()
+    |> case do
+      {:ok, cart} -> {:ok, reload_cart(cart) }
+      {:error, changeset} -> {:error, changeset}
+    end
+  end
+
 
   @doc """
   Updates a cart.
@@ -82,9 +111,21 @@ defmodule HelloPhx.ShoppingCart do
 
   """
   def update_cart(%Cart{} = cart, attrs) do
-    cart
-    |> Cart.changeset(attrs)
-    |> Repo.update()
+    changeset =
+      cart
+      |> Cart.changeset(attrs)
+      |> Ecto.Changeset.cast_assoc(:items, with: &CartItem.changeset/2)
+
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:cart, changeset)
+    |> Ecto.Multi.delete_all(:discarded_items, fn %{cart: cart} ->
+      from(i in CartItem, where: i.cart_id == ^cart.id and i.quantity == 0)
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{cart: cart}} -> {:ok, cart}
+      {:error, :cart, changeset, _changes_so_far} -> {:error, changeset}
+    end
   end
 
   @doc """
@@ -115,8 +156,6 @@ defmodule HelloPhx.ShoppingCart do
   def change_cart(%Cart{} = cart, attrs \\ %{}) do
     Cart.changeset(cart, attrs)
   end
-
-  alias HelloPhx.ShoppingCart.CartItem
 
   @doc """
   Returns the list of cart_items.
@@ -213,6 +252,26 @@ defmodule HelloPhx.ShoppingCart do
   end
 
   def get_cart_by_user_uuid(user_uuid) do
-    Repo.get_by(Cart, user_uuid: user_uuid)
+    Repo.one(
+      from(c in Cart,
+        where: c.user_uuid == ^user_uuid,
+        left_join: i in assoc(c, :items),
+        left_join: p in assoc(i, :product),
+        order_by: [asc: i.inserted_at],
+        preload: [items: { i, product: p }]
+      )
+    )
+  end
+
+  def total_item_price(%CartItem{} = item) do
+    Decimal.mult(item.product.price, item.quantity)
+  end
+
+  def total_cart_price(%Cart{} = cart) do
+    Enum.reduce(cart.items, 0, fn item, acc ->
+      item
+      |> total_item_price()
+      |> Decimal.add(acc)
+    end)
   end
 end
