@@ -7,7 +7,7 @@ defmodule HelloPhxWeb.HelloController do
     render(conn, :index)
   end
 
-  def show(conn, %{"messenger" => messenger}) do
-    render(conn, :show, messenger: messenger)
+  def show(conn, %{"message" => message}) do
+    render(conn, :show, message: message)
   end
 end

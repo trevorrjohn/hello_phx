@@ -1,6 +1,6 @@
 <h1>Hi</h1>
 <section>
-  <.greet messenger={@messenger} />
+  <.greet message={@message} />
 </section>
 
 <table>
@@ -15,3 +15,7 @@
     </tr>
   <% end %>
 </table>
+
+<.modal id="foo" show={true}>
+  <.greet message={@message} />
+</.modal>

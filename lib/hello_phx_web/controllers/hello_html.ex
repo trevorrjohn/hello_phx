@@ -12,7 +12,7 @@ defmodule HelloPhxWeb.HelloHTML do
 
   def greet(assigns) do
     ~H"""
-    <h1 class="text-2xl">Hi there: <%= @messenger %></h1>
+    <h1 class="text-2xl">Hi there: <%= @message %></h1>
     """
   end
   #
