@@ -49,6 +49,8 @@ defmodule HelloPhxWeb.Router do
 
     resources "/products", ProductController
 
+    resources "/orders", OrderController, only: [:create, :show]
+
     resources "/cart_items", CartItemController, only: [:create, :delete]
 
     get "/cart", CartController, :show
