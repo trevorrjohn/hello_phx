@@ -20,6 +20,9 @@ defmodule HelloPhxWeb.Router do
     get "/", PageController, :home
     get "/hello", HelloController, :index
     get "/hello/:message", HelloController, :show
+
+    resources "/products", ProductController
+
     # resources "/users", UserController
     # resources "/posts", PostController, only: [:index, :show]
     # resources "/comments", CommentController, except: [:delete]
