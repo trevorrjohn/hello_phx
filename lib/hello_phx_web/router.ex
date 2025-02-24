@@ -61,6 +61,11 @@ defmodule HelloPhxWeb.Router do
     # resources "/comments", CommentController, except: [:delete]
   end
 
+  scope "/api", HelloPhxWeb do
+    pipe_through :api
+    resources "/urls", UrlController, except: [:new, :edit]
+  end
+
   # scope "/admin", HelloPhxWeb.Admin do
   #   pipe_through :browser
   #
